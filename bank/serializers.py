@@ -6,12 +6,18 @@ from .models import User, BankAccount, Transaction, Loan, EMI, UserRequest
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'phone', 'address', 'password']
-        extra_kwargs = {'password': {'write_only': True}}
+        fields = ['username', 'password']
+        extra_kwargs = {
+            'password': {'write_only': True}
+        }
 
     def create(self, validated_data):
-        validated_data['password'] = make_password(validated_data['password'])
-        return super().create(validated_data)
+        user = User(
+            username=validated_data['username']
+        )
+        user.set_password(validated_data['password'])  # 🔑 hash password
+        user.save()
+        return user
 
 
 # ===================== BANK ACCOUNT SERIALIZER =====================

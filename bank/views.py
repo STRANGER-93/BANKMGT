@@ -1,24 +1,57 @@
 from decimal import Decimal
 from datetime import timedelta
-from django.db import transaction
+
 from django.utils import timezone
+from django.db import transaction
+from django.shortcuts import render
+from django.contrib.auth import authenticate, login
+from django.views.decorators.csrf import csrf_exempt
 
 from rest_framework import viewsets, permissions, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
 
 from .models import *
 from .serializers import *
 
-from django.shortcuts import render
 
+# ===================== HOME =====================
 def home_view(request):
     return render(request, 'home.html')
+
+
+# ===================== AUTH =====================
+@csrf_exempt  # 🔑 REQUIRED for session login from React (dev)
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def login_view(request):
+    username = request.data.get("username")
+    password = request.data.get("password")
+
+    if not username or not password:
+        return Response(
+            {"error": "Username and password required"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    user = authenticate(request, username=username, password=password)
+
+    if user is None:
+        return Response(
+            {"error": "Invalid credentials"},
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+
+    login(request, user)
+    return Response({"message": "Login successful"})
+
 
 # ===================== PERMISSIONS =====================
 def is_admin(user):
     return user.is_authenticated and user.role == 'admin'
+
 
 class IsAdminUser(permissions.BasePermission):
     def has_permission(self, request, view):
@@ -58,15 +91,18 @@ class AdminLoanViewSet(viewsets.ModelViewSet):
                 loan.approved_date = timezone.now()
                 loan.save()
                 self.create_emi_schedule(loan)
+
             elif action_type == 'reject':
                 loan.status = 'rejected'
                 loan.approved_by = request.user
                 loan.approved_date = timezone.now()
                 loan.save()
+
             else:
                 return Response({'error': 'Invalid action'}, status=400)
 
-        return Response({'message': f'Loan {loan.status}', 'status': loan.status})
+        return Response({'message': f'Loan {loan.status}'})
+
 
     def create_emi_schedule(self, loan):
         emi_amount = loan.calculate_emi()
@@ -88,6 +124,7 @@ class AdminLoanViewSet(viewsets.ModelViewSet):
                 interest=round(interest, 2),
                 status='pending'
             )
+
             due_date += timedelta(days=30)
 
 
@@ -105,32 +142,21 @@ class AdminRequestViewSet(viewsets.ModelViewSet):
             account = user_request.account
 
             if action_type == 'approve':
-                if user_request.request_type == 'deposit':
-                    account.balance += user_request.amount
-                    account.save()
+                if user_request.request_type in ['deposit', 'withdrawal'] and account:
                     Transaction.objects.create(
                         account=account,
-                        transaction_type='deposit',
-                        amount=user_request.amount,
-                        description='Deposit request approved'
-                    )
-                elif user_request.request_type == 'withdrawal':
-                    if account.balance < user_request.amount:
-                        return Response({'error': 'Insufficient balance'}, status=400)
-                    account.balance -= user_request.amount
-                    account.save()
-                    Transaction.objects.create(
-                        account=account,
-                        transaction_type='withdrawal',
-                        amount=user_request.amount,
-                        description='Withdrawal request approved'
+                        transaction_type=user_request.request_type,
+                        amount=Decimal(user_request.amount),
+                        description='Request approved by admin'
                     )
                 user_request.status = 'approved'
 
             elif action_type == 'reject':
                 user_request.status = 'rejected'
+
             elif action_type == 'complete':
                 user_request.status = 'completed'
+
             else:
                 return Response({'error': 'Invalid action'}, status=400)
 
@@ -138,7 +164,7 @@ class AdminRequestViewSet(viewsets.ModelViewSet):
             user_request.processed_at = timezone.now()
             user_request.save()
 
-        return Response({'message': 'Request processed', 'status': user_request.status})
+        return Response({'message': 'Request processed'})
 
 
 # ===================== USER VIEWS =====================
@@ -147,22 +173,13 @@ class UserDashboardView(APIView):
 
     def get(self, request):
         user = request.user
-        accounts = BankAccount.objects.filter(user=user)
-        transactions = Transaction.objects.filter(account__in=accounts).order_by('-date')[:10]
-        loans = Loan.objects.filter(user=user)
-        requests = UserRequest.objects.filter(user=user).order_by('-created_at')[:5]
 
         return Response({
             'user': {
                 'id': user.id,
                 'username': user.username,
-                'email': user.email,
                 'role': user.role
-            },
-            'accounts': BankAccountSerializer(accounts, many=True).data,
-            'transactions': TransactionSerializer(transactions, many=True).data,
-            'loans': LoanSerializer(loans, many=True).data,
-            'requests': UserRequestSerializer(requests, many=True).data
+            }
         })
 
 
@@ -201,14 +218,25 @@ class UserRequestViewSet(viewsets.ModelViewSet):
         serializer.save(user=self.request.user, status='pending')
 
 
-# ===================== PUBLIC =====================
+# ===================== REGISTER =====================
 class RegisterView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
         data = request.data.copy()
         data['role'] = 'user'
+
         serializer = UserSerializer(data=data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response({'message': 'User registered successfully'}, status=status.HTTP_201_CREATED)
+        user = serializer.save()
+
+        BankAccount.objects.create(
+            user=user,
+            account_type=request.data.get('account_type', 'savings'),
+            balance=0
+        )
+
+        return Response(
+            {"message": "Registered Successfully"},
+            status=status.HTTP_201_CREATED
+        )

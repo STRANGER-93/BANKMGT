@@ -1,0 +1,20 @@
+/* src/components/user/Dashboard.css */
+.dashboard {
+  background: white;
+  max-width: 600px;
+  margin: 50px auto;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  font-family: Arial, sans-serif;
+}
+
+.dashboard h2 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.dashboard p {
+  font-size: 18px;
+  margin: 10px 0;
+}

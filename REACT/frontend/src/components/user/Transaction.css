@@ -1,0 +1,46 @@
+/* src/components/user/TransactionRequest.css */
+.transaction-request {
+  background: white;
+  max-width: 400px;
+  margin: 30px auto;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  font-family: Arial, sans-serif;
+}
+
+.transaction-request h3 {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.transaction-request select,
+.transaction-request input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px;
+  border-radius: 5px;
+  border: 1px solid #dcdde1;
+  font-size: 16px;
+}
+
+.transaction-request button {
+  width: 100%;
+  padding: 12px;
+  background-color: #4CAF50;
+  color: white;
+  font-size: 16px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.transaction-request button:hover {
+  background-color: #45a049;
+}
+
+.transaction-request div {
+  text-align: center;
+  margin-bottom: 10px;
+  color: #e84118;
+}

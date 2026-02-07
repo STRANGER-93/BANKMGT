@@ -1,0 +1,85 @@
+/* Reset */
+* {
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+}
+
+/* Full page background */
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+/* Center wrapper */
+.register-wrapper {
+  position: fixed;
+  inset: 0; /* top:0; right:0; bottom:0; left:0 */
+  background: #f0f2f5;
+  display: flex;
+  justify-content: center; /* horizontal center */
+  align-items: center;     /* vertical center */
+  color: black;
+}
+
+/* Register card */
+.register-box {
+  width: 350px;
+  padding: 30px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.15);
+  text-align: center;
+}
+
+/* Title */
+.register-box h2 {
+  margin-bottom: 20px;
+}
+
+/* Inputs & select */
+.register-box input,
+.register-box select {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 12px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+}
+
+/* Button */
+.register-box button {
+  width: 100%;
+  padding: 10px;
+  background: #1976d2;
+  border: none;
+  border-radius: 5px;
+  color: white;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.register-box button:hover {
+  background: #1565c0;
+}
+
+/* Error message */
+.error {
+  color: red;
+  margin-bottom: 10px;
+}
+
+/* Login link */
+.register-box p {
+  margin-top: 15px;
+  font-size: 14px;
+}
+
+.register-box a {
+  color: #1976d2;
+  text-decoration: none;
+}
+
+.register-box a:hover {
+  text-decoration: underline;
+}

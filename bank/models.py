@@ -49,6 +49,9 @@ class BankAccount(models.Model):
 
 
 # ===================== TRANSACTION MODEL =====================
+from decimal import Decimal
+from django.db import models
+
 class Transaction(models.Model):
     TYPE_CHOICES = (
         ('deposit', 'Deposit'),
@@ -56,13 +59,25 @@ class Transaction(models.Model):
         ('transfer', 'Transfer'),
         ('loan_disbursement', 'Loan Disbursement'),
     )
-    account = models.ForeignKey(BankAccount, on_delete=models.CASCADE, related_name='transactions')
+
+    account = models.ForeignKey('BankAccount', on_delete=models.CASCADE, related_name='transactions')
     transaction_type = models.CharField(max_length=20, choices=TYPE_CHOICES)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
+    description = models.TextField(blank=True, null=True)
     date = models.DateTimeField(auto_now_add=True)
 
+    def save(self, *args, **kwargs):
+        # Only update balance when creating a new transaction
+        if not self.pk:  # new transaction
+            if self.transaction_type == 'deposit':
+                self.account.balance += self.amount
+            elif self.transaction_type == 'withdrawal':
+                self.account.balance -= self.amount
+            self.account.save()  # update bank balance
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return f"{self.transaction_type} - ₹{self.amount}"
+        return f"{self.transaction_type} - ₹{self.amount} ({self.account.account_number})"
 
 
 # ===================== LOAN MODEL =====================
