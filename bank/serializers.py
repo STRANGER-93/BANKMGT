@@ -2,20 +2,25 @@ from rest_framework import serializers
 from django.contrib.auth.hashers import make_password
 from .models import User, BankAccount, Transaction, Loan, EMI, UserRequest
 
+
 # ===================== USER SERIALIZER =====================
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['username', 'password']
+        fields = ['username', 'password', 'first_name', 'email', 'phone', 'role']
         extra_kwargs = {
             'password': {'write_only': True}
         }
 
     def create(self, validated_data):
         user = User(
-            username=validated_data['username']
+            username=validated_data['username'],
+            first_name=validated_data.get('first_name', ''),
+            email=validated_data.get('email', ''),
+            phone=validated_data.get('phone', ''),
+            role=validated_data.get('role', 'user'),
         )
-        user.set_password(validated_data['password'])  # 🔑 hash password
+        user.set_password(validated_data['password'])
         user.save()
         return user
 
@@ -23,7 +28,7 @@ class UserSerializer(serializers.ModelSerializer):
 # ===================== BANK ACCOUNT SERIALIZER =====================
 class BankAccountSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source='user.username', read_only=True)
-    
+
     class Meta:
         model = BankAccount
         fields = ['id', 'account_number', 'user', 'user_name', 'account_type', 'balance', 'status']
@@ -43,7 +48,7 @@ class LoanSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source='user.username', read_only=True)
     emi_amount = serializers.SerializerMethodField()
     total_payable = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = Loan
         fields = [
@@ -52,10 +57,10 @@ class LoanSerializer(serializers.ModelSerializer):
             'created_at', 'approved_date', 'approved_by'
         ]
         read_only_fields = ['loan_id', 'created_at', 'approved_date', 'approved_by']
-    
+
     def get_emi_amount(self, obj):
         return obj.calculate_emi()
-    
+
     def get_total_payable(self, obj):
         emi = obj.calculate_emi()
         return round(emi * obj.duration_months, 2)
@@ -64,7 +69,7 @@ class LoanSerializer(serializers.ModelSerializer):
 # ===================== EMI SERIALIZER =====================
 class EMISerializer(serializers.ModelSerializer):
     loan_id = serializers.CharField(source='loan.loan_id', read_only=True)
-    
+
     class Meta:
         model = EMI
         fields = '__all__'
@@ -73,9 +78,16 @@ class EMISerializer(serializers.ModelSerializer):
 # ===================== USER REQUEST SERIALIZER =====================
 class UserRequestSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source='user.username', read_only=True)
-    account_number = serializers.CharField(source='account.account_number', read_only=True, allow_null=True)
-    request_type_display = serializers.CharField(source='get_request_type_display', read_only=True)
-    
+    account_number = serializers.CharField(
+        source='account.account_number',
+        read_only=True,
+        allow_null=True
+    )
+    request_type_display = serializers.CharField(
+        source='get_request_type_display',
+        read_only=True
+    )
+
     class Meta:
         model = UserRequest
         fields = [

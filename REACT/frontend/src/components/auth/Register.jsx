@@ -5,12 +5,11 @@ import "./Register.css";
 
 export default function Register() {
   const navigate = useNavigate();
-
   const [form, setForm] = useState({
+    username: "",
     first_name: "",
     phone: "",
     email: "",
-    username: "",
     password: "",
     account_type: "savings",
   });
@@ -22,11 +21,11 @@ export default function Register() {
     setError("");
 
     try {
-      await Api.post("register/", form, { withCredentials: true });
+      await Api.post("register/", form); // baseURL already /api/
       alert("Registered Successfully. Now login.");
       navigate("/");
     } catch (err) {
-      console.log(err);
+      console.log(err.response?.data || err);
       setError("Registration failed. Try again.");
     }
   };
@@ -39,19 +38,23 @@ export default function Register() {
         {error && <div className="error">{error}</div>}
 
         <input
+          placeholder="Username"
+          value={form.username}
+          onChange={(e) => setForm({ ...form, username: e.target.value })}
+          required
+        />
+        <input
           placeholder="Full Name"
           value={form.first_name}
           onChange={(e) => setForm({ ...form, first_name: e.target.value })}
           required
         />
-
         <input
-          placeholder="Contact Number"
+          placeholder="Phone"
           value={form.phone}
           onChange={(e) => setForm({ ...form, phone: e.target.value })}
           required
         />
-
         <input
           placeholder="Email"
           type="email"
@@ -59,7 +62,6 @@ export default function Register() {
           onChange={(e) => setForm({ ...form, email: e.target.value })}
           required
         />
-
         <select
           value={form.account_type}
           onChange={(e) => setForm({ ...form, account_type: e.target.value })}
@@ -67,14 +69,6 @@ export default function Register() {
           <option value="savings">Savings</option>
           <option value="current">Current</option>
         </select>
-
-        <input
-          placeholder="Username"
-          value={form.username}
-          onChange={(e) => setForm({ ...form, username: e.target.value })}
-          required
-        />
-
         <input
           placeholder="Password"
           type="password"

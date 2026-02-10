@@ -14,15 +14,10 @@ export default function Login() {
     setError("");
 
     try {
-      await Api.post(
-        "login/",
-        { username, password },
-        { withCredentials: true }
-      );
-
+      await Api.post("login/", { username, password }, { withCredentials: true });
       navigate("/dashboard");
     } catch (err) {
-      console.log(err);
+      console.log(err.response?.data || err);
       setError("Invalid username or password");
     }
   };
@@ -41,7 +36,6 @@ export default function Login() {
           onChange={(e) => setUsername(e.target.value)}
           required
         />
-
         <input
           type="password"
           placeholder="Password"

@@ -7,14 +7,21 @@ from django.shortcuts import render
 from django.contrib.auth import authenticate, login
 from django.views.decorators.csrf import csrf_exempt
 
-from rest_framework import viewsets, permissions, status
+from rest_framework import viewsets, permissions
 from rest_framework.views import APIView
-from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.decorators import action, api_view, permission_classes, authentication_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.authentication import SessionAuthentication
 
 from .models import *
 from .serializers import *
+
+
+# ===================== CSRF EXEMPT SESSION AUTH =====================
+class CsrfExemptSessionAuthentication(SessionAuthentication):
+    def enforce_csrf(self, request):
+        return
 
 
 # ===================== HOME =====================
@@ -23,29 +30,21 @@ def home_view(request):
 
 
 # ===================== AUTH =====================
-@csrf_exempt  # 🔑 REQUIRED for session login from React (dev)
+@csrf_exempt
+@authentication_classes([CsrfExemptSessionAuthentication])
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login_view(request):
     username = request.data.get("username")
     password = request.data.get("password")
 
-    if not username or not password:
-        return Response(
-            {"error": "Username and password required"},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
     user = authenticate(request, username=username, password=password)
 
-    if user is None:
-        return Response(
-            {"error": "Invalid credentials"},
-            status=status.HTTP_401_UNAUTHORIZED
-        )
+    if user is not None:
+        login(request, user)
+        return Response({"message": "Login successful"}, status=200)
 
-    login(request, user)
-    return Response({"message": "Login successful"})
+    return Response({"error": "Invalid credentials"}, status=401)
 
 
 # ===================== PERMISSIONS =====================
@@ -60,18 +59,21 @@ class IsAdminUser(permissions.BasePermission):
 
 # ===================== ADMIN VIEWS =====================
 class AdminUserViewSet(viewsets.ModelViewSet):
+    authentication_classes = [CsrfExemptSessionAuthentication]
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsAdminUser]
 
 
 class AdminBankAccountViewSet(viewsets.ModelViewSet):
+    authentication_classes = [CsrfExemptSessionAuthentication]
     queryset = BankAccount.objects.all()
     serializer_class = BankAccountSerializer
     permission_classes = [IsAdminUser]
 
 
 class AdminLoanViewSet(viewsets.ModelViewSet):
+    authentication_classes = [CsrfExemptSessionAuthentication]
     queryset = Loan.objects.all()
     serializer_class = LoanSerializer
     permission_classes = [IsAdminUser]
@@ -103,7 +105,6 @@ class AdminLoanViewSet(viewsets.ModelViewSet):
 
         return Response({'message': f'Loan {loan.status}'})
 
-
     def create_emi_schedule(self, loan):
         emi_amount = loan.calculate_emi()
         principal = Decimal(loan.amount)
@@ -129,6 +130,7 @@ class AdminLoanViewSet(viewsets.ModelViewSet):
 
 
 class AdminRequestViewSet(viewsets.ModelViewSet):
+    authentication_classes = [CsrfExemptSessionAuthentication]
     queryset = UserRequest.objects.all()
     serializer_class = UserRequestSerializer
     permission_classes = [IsAdminUser]
@@ -169,11 +171,11 @@ class AdminRequestViewSet(viewsets.ModelViewSet):
 
 # ===================== USER VIEWS =====================
 class UserDashboardView(APIView):
+    authentication_classes = [CsrfExemptSessionAuthentication]
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         user = request.user
-
         return Response({
             'user': {
                 'id': user.id,
@@ -184,6 +186,7 @@ class UserDashboardView(APIView):
 
 
 class UserAccountViewSet(viewsets.ReadOnlyModelViewSet):
+    authentication_classes = [CsrfExemptSessionAuthentication]
     serializer_class = BankAccountSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -192,6 +195,7 @@ class UserAccountViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class UserTransactionViewSet(viewsets.ReadOnlyModelViewSet):
+    authentication_classes = [CsrfExemptSessionAuthentication]
     serializer_class = TransactionSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -200,6 +204,7 @@ class UserTransactionViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class UserLoanViewSet(viewsets.ReadOnlyModelViewSet):
+    authentication_classes = [CsrfExemptSessionAuthentication]
     serializer_class = LoanSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -208,6 +213,7 @@ class UserLoanViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class UserRequestViewSet(viewsets.ModelViewSet):
+    authentication_classes = [CsrfExemptSessionAuthentication]
     serializer_class = UserRequestSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -220,6 +226,7 @@ class UserRequestViewSet(viewsets.ModelViewSet):
 
 # ===================== REGISTER =====================
 class RegisterView(APIView):
+    authentication_classes = [CsrfExemptSessionAuthentication]
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
@@ -237,6 +244,9 @@ class RegisterView(APIView):
         )
 
         return Response(
-            {"message": "Registered Successfully"},
-            status=status.HTTP_201_CREATED
+            {
+                "message": "Registered Successfully",
+                "username": user.username
+            },
+            status=201
         )
