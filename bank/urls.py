@@ -23,4 +23,6 @@ urlpatterns = [
 
     # Include router for other API endpoints
     path('', include(router.urls)),
+
+
 ]

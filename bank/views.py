@@ -30,10 +30,10 @@ def home_view(request):
 
 
 # ===================== AUTH =====================
-@csrf_exempt
-@authentication_classes([CsrfExemptSessionAuthentication])
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@authentication_classes([CsrfExemptSessionAuthentication])
+@csrf_exempt
 def login_view(request):
     username = request.data.get("username")
     password = request.data.get("password")
